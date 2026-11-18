@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.polyfrost.polydium.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "plugin": "org.polyfrost.polydium.mixin.PolydiumMixinPlugin",
+  "client": [
+    "world.ClientChunkCacheMixin",
+    "entity.EntityMixin",
+    "world.WorldChunkMixin",
+    "hud.GameGuiMixin",
+    "hud.GameRendererMixin",
+    "hud.GlStateManagerMixin",
+    "limiter.MinecraftMixin",
+    "particle.ParticleMixin",
+    "srv.ConnectScreenMixin",
+    "srv.ServerAddressMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixinextras": {
+    "minVersion": "0.5.1"
+  }
+}
