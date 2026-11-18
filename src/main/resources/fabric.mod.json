@@ -9,6 +9,7 @@
   ],
   "license": "PolyForm-Shield-1.0.0",
   "environment": "client",
+  "accessWidener": "polydium.accesswidener",
   "mixins": [
     "polydium.mixins.json"
   ],

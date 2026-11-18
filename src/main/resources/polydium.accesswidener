@@ -1,0 +1,9 @@
+accessWidener v2 named
+accessible class net/minecraft/client/render/platform/GlStateManager$Alpha
+accessible class net/minecraft/client/render/platform/GlStateManager$Blend
+accessible class net/minecraft/client/render/platform/GlStateManager$GlState
+accessible class net/minecraft/client/render/platform/GlStateManager$Color
+accessible field net/minecraft/client/render/platform/GlStateManager ALPHA_TEST Lnet/minecraft/client/render/platform/GlStateManager$Alpha;
+accessible field net/minecraft/client/render/platform/GlStateManager BLEND Lnet/minecraft/client/render/platform/GlStateManager$Blend;
+accessible field net/minecraft/client/render/platform/GlStateManager COLOR Lnet/minecraft/client/render/platform/GlStateManager$Color;
+accessible field net/minecraft/client/render/platform/GlStateManager$GlState enabled Z

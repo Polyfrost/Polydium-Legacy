@@ -79,10 +79,12 @@ public final class HudCache {
             target.clear();
             target.bindWrite(true);
             capturing = true;
+            syncState();
             try {
                 draw.run();
             } finally {
                 capturing = false;
+                syncState();
                 minecraft.getRenderTarget().bindWrite(true);
                 GlStateManager.colorMask(true, true, true, !minecraft.options.anaglyph);
             }
@@ -113,6 +115,33 @@ public final class HudCache {
         }
         composite(window);
         return true;
+    }
+
+    public static void syncState() {
+        GlStateManager.Color color = GlStateManager.COLOR;
+        if (color.r >= 0.0F) {
+            GL11.glColor4f(color.r, color.g, color.b, capturedAlpha(color.a));
+        }
+        syncAlphaFunc();
+    }
+
+    public static void syncAlphaFunc() {
+        GlStateManager.Alpha test = GlStateManager.ALPHA_TEST;
+        GL11.glAlphaFunc(test.func, capturedAlphaRef(test.ref));
+    }
+
+    public static float capturedAlpha(float alpha) {
+        return forcingOpaque() ? 1.0F : alpha;
+    }
+
+    public static float capturedAlphaRef(float ref) {
+        float alpha = GlStateManager.COLOR.a;
+        if (!forcingOpaque() || GlStateManager.ALPHA_TEST.func != GL11.GL_GREATER || alpha < 0.0F || alpha >= 1.0F) return ref;
+        return alpha == 0.0F ? 1.0F : ref / alpha;
+    }
+
+    private static boolean forcingOpaque() {
+        return capturing && !GlStateManager.BLEND.state.enabled;
     }
 
     public static int captureFramebuffer() {

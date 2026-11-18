@@ -20,6 +20,7 @@ object Versions {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/polydium.accesswidener")
     runs.named("client") {
         jvmArguments.add("-Dmixin.debug.export=true")
     }
