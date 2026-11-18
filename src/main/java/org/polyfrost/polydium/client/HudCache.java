@@ -115,6 +115,10 @@ public final class HudCache {
         return true;
     }
 
+    public static int captureFramebuffer() {
+        return target.frameBufferId;
+    }
+
     private static void composite(Window window) {
         GlStateManager.disableAlphaTest();
         GlStateManager.disableDepthTest();

@@ -11,6 +11,7 @@
     "hud.GameGuiMixin",
     "hud.GameRendererMixin",
     "hud.GlStateManagerMixin",
+    "hud.RenderTargetMixin",
     "limiter.MinecraftMixin",
     "particle.ParticleMixin",
     "srv.ConnectScreenMixin",
