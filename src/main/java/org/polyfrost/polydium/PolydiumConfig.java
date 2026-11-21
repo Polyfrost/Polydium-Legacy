@@ -25,6 +25,7 @@ public final class PolydiumConfig {
     public int hudFps = 60;
     public boolean connectSrvLookup = true;
     public boolean preciseFrameLimiter = true;
+    public boolean worldBorderCaching = true;
 
     private static PolydiumConfig load() {
         PolydiumConfig config = null;

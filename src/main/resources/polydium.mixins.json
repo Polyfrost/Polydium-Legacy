@@ -6,9 +6,12 @@
   "plugin": "org.polyfrost.polydium.mixin.PolydiumMixinPlugin",
   "client": [
     "world.ClientChunkCacheMixin",
+    "border.WorldRendererMixin",
     "entity.EntityMixin",
     "world.WorldChunkMixin",
+    "hud.ChatGuiMixin",
     "hud.GameGuiMixin",
+    "hud.GameGuiCrosshairMixin",
     "hud.GameRendererMixin",
     "hud.GlStateManagerMixin",
     "hud.RenderTargetMixin",

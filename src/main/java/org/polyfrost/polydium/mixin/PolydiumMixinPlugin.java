@@ -21,6 +21,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             case "hud" -> config.hudCaching;
             case "srv" -> config.connectSrvLookup;
             case "limiter" -> config.preciseFrameLimiter;
+            case "border" -> config.worldBorderCaching;
             default -> true;
         };
     }

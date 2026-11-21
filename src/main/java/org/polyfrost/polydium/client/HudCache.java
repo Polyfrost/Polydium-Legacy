@@ -4,6 +4,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GameGui;
 import net.minecraft.client.gui.GuiElement;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.Window;
 import net.minecraft.client.render.pipeline.RenderTarget;
 import net.minecraft.client.render.platform.GLX;
@@ -18,6 +19,8 @@ import org.apache.logging.log4j.LogManager;
 import org.lwjgl.opengl.GL11;
 import org.polyfrost.polydium.PolydiumConfig;
 
+import java.util.function.BooleanSupplier;
+
 public final class HudCache {
     public static boolean capturing;
 
@@ -26,6 +29,10 @@ public final class HudCache {
     private static boolean dirty = true;
     private static long lastCapture;
     private static int lastScale;
+    private static int lastSlot = -1;
+    private static Screen lastScreen;
+    private static int crosshairList;
+    private static boolean crosshairRecorded;
 
     private HudCache() {
     }
@@ -36,14 +43,12 @@ public final class HudCache {
         void polydium$renderPumpkinOverlay(Window window);
 
         void polydium$renderNauseaOverlay(float portalTime, Window window);
-
-        boolean polydium$hasCrosshair();
     }
 
     public static boolean render(GameGui gui, float tickDelta, Runnable draw) {
         Minecraft minecraft = Minecraft.getInstance();
         int fps = PolydiumConfig.INSTANCE.hudFps;
-        if (failed || fps <= 0 || !GLX.useFbo() || minecraft.screen != null) {
+        if (failed || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
             dirty = true;
             return false;
         }
@@ -68,6 +73,14 @@ public final class HudCache {
             lastScale = window.getScale();
             dirty = true;
         }
+        if (minecraft.player.inventory.selectedSlot != lastSlot) {
+            lastSlot = minecraft.player.inventory.selectedSlot;
+            dirty = true;
+        }
+        if (minecraft.screen != lastScreen) {
+            lastScreen = minecraft.screen;
+            dirty = true;
+        }
 
         long now = System.nanoTime();
         long interval = 1_000_000_000L / fps;
@@ -79,6 +92,7 @@ public final class HudCache {
             target.clear();
             target.bindWrite(true);
             capturing = true;
+            crosshairRecorded = false;
             syncState();
             try {
                 draw.run();
@@ -106,15 +120,62 @@ public final class HudCache {
                 ((Gui) gui).polydium$renderNauseaOverlay(portalTime, window);
             }
         }
-        if (((Gui) gui).polydium$hasCrosshair()) {
-            GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-            minecraft.getTextureManager().bind(GuiElement.ICONS_LOCATION);
-            GlStateManager.blendFuncSeparate(GL11.GL_ONE_MINUS_DST_COLOR, GL11.GL_ONE_MINUS_SRC_COLOR, GL11.GL_ONE, GL11.GL_ZERO);
-            GlStateManager.enableAlphaTest();
-            gui.drawTexture(window.getWidth() / 2 - 7, window.getHeight() / 2 - 7, 0, 0, 16, 16);
+        if (crosshairRecorded) {
+            crosshairState(minecraft);
+            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+            GL11.glPushMatrix();
+            GL11.glCallList(crosshairList);
+            GL11.glPopMatrix();
+            GL11.glPopAttrib();
         }
         composite(window);
         return true;
+    }
+
+    public static void invalidate() {
+        dirty = true;
+    }
+
+    private static boolean needsLiveHud(Screen screen) {
+        return screen != null && screen.getClass().getName().startsWith("org.polyfrost.oneconfig.");
+    }
+
+    public static void recordCrosshair(GameGui gui, BooleanSupplier hasCrosshair) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (crosshairList == 0) crosshairList = GL11.glGenLists(1);
+        boolean depthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
+        capturing = false;
+        syncState();
+        crosshairState(minecraft);
+        GL11.glColorMask(false, false, false, false);
+        GL11.glDepthMask(false);
+        GL11.glNewList(crosshairList, GL11.GL_COMPILE_AND_EXECUTE);
+        try {
+            if (hasCrosshair.getAsBoolean()) {
+                Window window = new Window(minecraft);
+                GlStateManager.blendFuncSeparate(GL11.GL_ONE_MINUS_DST_COLOR, GL11.GL_ONE_MINUS_SRC_COLOR, GL11.GL_ONE, GL11.GL_ZERO);
+                GlStateManager.enableAlphaTest();
+                gui.drawTexture(window.getWidth() / 2 - 7, window.getHeight() / 2 - 7, 0, 0, 16, 16);
+            }
+        } finally {
+            GL11.glEndList();
+            crosshairRecorded = true;
+            GL11.glColorMask(true, true, true, true);
+            GL11.glDepthMask(depthMask);
+            capturing = true;
+            syncState();
+        }
+    }
+
+    private static void crosshairState(Minecraft minecraft) {
+        GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+        GlStateManager.enableTexture();
+        minecraft.getTextureManager().bind(GuiElement.ICONS_LOCATION);
+        GlStateManager.disableLighting();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+        GlStateManager.enableAlphaTest();
+        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
     }
 
     public static void syncState() {

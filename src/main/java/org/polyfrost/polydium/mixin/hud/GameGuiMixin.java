@@ -25,9 +25,6 @@ public abstract class GameGuiMixin implements HudCache.Gui {
     private void renderNauseaOverlay(float portalTime, Window window) {
     }
 
-    @Shadow
-    protected abstract boolean hasCrosshair();
-
     @Override
     public void polydium$renderVignette(float brightness, Window window) {
         this.renderVignette(brightness, window);
@@ -41,11 +38,6 @@ public abstract class GameGuiMixin implements HudCache.Gui {
     @Override
     public void polydium$renderNauseaOverlay(float portalTime, Window window) {
         this.renderNauseaOverlay(portalTime, window);
-    }
-
-    @Override
-    public boolean polydium$hasCrosshair() {
-        return this.hasCrosshair();
     }
 
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;renderVignette(FLnet/minecraft/client/render/Window;)V"))
@@ -65,10 +57,5 @@ public abstract class GameGuiMixin implements HudCache.Gui {
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;renderNauseaOverlay(FLnet/minecraft/client/render/Window;)V"))
     private void polydium$skipCachedPortal(GameGui gui, float portalTime, Window window, Operation<Void> original) {
         if (!HudCache.capturing) original.call(gui, portalTime, window);
-    }
-
-    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;hasCrosshair()Z"))
-    private boolean polydium$skipCachedCrosshair(GameGui gui, Operation<Boolean> original) {
-        return !HudCache.capturing && original.call(gui);
     }
 }
