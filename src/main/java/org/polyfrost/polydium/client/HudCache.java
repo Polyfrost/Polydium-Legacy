@@ -31,8 +31,10 @@ public final class HudCache {
     private static int lastScale;
     private static int lastSlot = -1;
     private static Screen lastScreen;
-    private static int crosshairList;
-    private static boolean crosshairRecorded;
+    private static long lastFrame;
+    private static long avgFrameTime;
+    private static GameGui crosshairGui;
+    private static BooleanSupplier crosshair;
 
     private HudCache() {
     }
@@ -49,6 +51,16 @@ public final class HudCache {
         Minecraft minecraft = Minecraft.getInstance();
         int fps = PolydiumConfig.INSTANCE.hudFps;
         if (failed || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
+            dirty = true;
+            return false;
+        }
+
+        long now = System.nanoTime();
+        long interval = 1_000_000_000L / fps;
+        long frameTime = Math.min(now - lastFrame, 2 * interval);
+        lastFrame = now;
+        avgFrameTime += (frameTime - avgFrameTime) / 8;
+        if (avgFrameTime >= interval) {
             dirty = true;
             return false;
         }
@@ -82,17 +94,17 @@ public final class HudCache {
             dirty = true;
         }
 
-        long now = System.nanoTime();
-        long interval = 1_000_000_000L / fps;
         long elapsed = now - lastCapture;
         if (dirty || elapsed >= interval) {
             lastCapture = dirty || elapsed >= 2 * interval ? now : lastCapture + interval;
             dirty = false;
             GlStateManager.colorMask(true, true, true, true);
-            target.clear();
             target.bindWrite(true);
+            GlStateManager.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
+            GlStateManager.clearDepth(1.0);
+            GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             capturing = true;
-            crosshairRecorded = false;
+            crosshair = null;
             syncState();
             try {
                 draw.run();
@@ -120,13 +132,8 @@ public final class HudCache {
                 ((Gui) gui).polydium$renderNauseaOverlay(portalTime, window);
             }
         }
-        if (crosshairRecorded) {
-            crosshairState(minecraft);
-            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
-            GL11.glPushMatrix();
-            GL11.glCallList(crosshairList);
-            GL11.glPopMatrix();
-            GL11.glPopAttrib();
+        if (crosshair != null) {
+            renderCrosshair(minecraft, window);
         }
         composite(window);
         return true;
@@ -140,30 +147,17 @@ public final class HudCache {
         return screen != null && screen.getClass().getName().startsWith("org.polyfrost.oneconfig.");
     }
 
-    public static void recordCrosshair(GameGui gui, BooleanSupplier hasCrosshair) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (crosshairList == 0) crosshairList = GL11.glGenLists(1);
-        boolean depthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
-        capturing = false;
-        syncState();
+    public static void deferCrosshair(GameGui gui, BooleanSupplier hasCrosshair) {
+        crosshairGui = gui;
+        crosshair = hasCrosshair;
+    }
+
+    private static void renderCrosshair(Minecraft minecraft, Window window) {
         crosshairState(minecraft);
-        GL11.glColorMask(false, false, false, false);
-        GL11.glDepthMask(false);
-        GL11.glNewList(crosshairList, GL11.GL_COMPILE_AND_EXECUTE);
-        try {
-            if (hasCrosshair.getAsBoolean()) {
-                Window window = new Window(minecraft);
-                GlStateManager.blendFuncSeparate(GL11.GL_ONE_MINUS_DST_COLOR, GL11.GL_ONE_MINUS_SRC_COLOR, GL11.GL_ONE, GL11.GL_ZERO);
-                GlStateManager.enableAlphaTest();
-                gui.drawTexture(window.getWidth() / 2 - 7, window.getHeight() / 2 - 7, 0, 0, 16, 16);
-            }
-        } finally {
-            GL11.glEndList();
-            crosshairRecorded = true;
-            GL11.glColorMask(true, true, true, true);
-            GL11.glDepthMask(depthMask);
-            capturing = true;
-            syncState();
+        if (crosshair.getAsBoolean()) {
+            GlStateManager.blendFuncSeparate(GL11.GL_ONE_MINUS_DST_COLOR, GL11.GL_ONE_MINUS_SRC_COLOR, GL11.GL_ONE, GL11.GL_ZERO);
+            GlStateManager.enableAlphaTest();
+            crosshairGui.drawTexture(window.getWidth() / 2 - 7, window.getHeight() / 2 - 7, 0, 0, 16, 16);
         }
     }
 
