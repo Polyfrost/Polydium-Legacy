@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.client;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GameGui;
@@ -19,8 +20,6 @@ import org.apache.logging.log4j.LogManager;
 import org.lwjgl.opengl.GL11;
 import org.polyfrost.polydium.PolydiumConfig;
 
-import java.util.function.BooleanSupplier;
-
 public final class HudCache {
     public static boolean capturing;
 
@@ -34,7 +33,7 @@ public final class HudCache {
     private static long lastFrame;
     private static long avgFrameTime;
     private static GameGui crosshairGui;
-    private static BooleanSupplier crosshair;
+    private static DeferredCall<Boolean> crosshair;
 
     private HudCache() {
     }
@@ -147,14 +146,21 @@ public final class HudCache {
         return screen != null && screen.getClass().getName().startsWith("org.polyfrost.oneconfig.");
     }
 
-    public static void deferCrosshair(GameGui gui, BooleanSupplier hasCrosshair) {
+    public static boolean deferCrosshair(GameGui gui, Operation<Boolean> hasCrosshair) {
+        try {
+            crosshair = new DeferredCall<>(hasCrosshair);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            LogManager.getLogger("Polydium").error("Could not defer crosshair, HUD caching disabled", e);
+            failed = true;
+            return false;
+        }
         crosshairGui = gui;
-        crosshair = hasCrosshair;
+        return true;
     }
 
     private static void renderCrosshair(Minecraft minecraft, Window window) {
         crosshairState(minecraft);
-        if (crosshair.getAsBoolean()) {
+        if (crosshair.call(crosshairGui)) {
             GlStateManager.blendFuncSeparate(GL11.GL_ONE_MINUS_DST_COLOR, GL11.GL_ONE_MINUS_SRC_COLOR, GL11.GL_ONE, GL11.GL_ZERO);
             GlStateManager.enableAlphaTest();
             crosshairGui.drawTexture(window.getWidth() / 2 - 7, window.getHeight() / 2 - 7, 0, 0, 16, 16);

@@ -11,8 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public abstract class GameGuiCrosshairMixin {
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;hasCrosshair()Z"))
     private boolean polydium$deferCrosshair(GameGui gui, Operation<Boolean> original) {
-        if (!HudCache.capturing) return original.call(gui);
-        HudCache.deferCrosshair(gui, () -> original.call(gui));
+        if (!HudCache.capturing || !HudCache.deferCrosshair(gui, original)) return original.call(gui);
         return false;
     }
 }
