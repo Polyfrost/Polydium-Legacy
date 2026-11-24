@@ -1,7 +1,6 @@
 package org.polyfrost.polydium.client;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GameGui;
 import net.minecraft.client.gui.GuiElement;
@@ -13,15 +12,17 @@ import net.minecraft.client.render.platform.GlStateManager;
 import net.minecraft.client.render.vertex.BufferBuilder;
 import net.minecraft.client.render.vertex.DefaultVertexFormat;
 import net.minecraft.client.render.vertex.Tesselator;
-import net.minecraft.entity.living.effect.StatusEffect;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 import org.apache.logging.log4j.LogManager;
 import org.lwjgl.opengl.GL11;
 import org.polyfrost.polydium.PolydiumConfig;
 
 public final class HudCache {
     public static boolean capturing;
+    // Set by GameGui.render's own overlay checks during capture, so mods that change those conditions
+    // (e.g. Vignette Tweaks forcing the vignette on Fast graphics) also apply to cached frames.
+    public static boolean vignette;
+    public static boolean pumpkin;
+    public static boolean portal;
 
     private static RenderTarget target;
     private static boolean failed;
@@ -103,6 +104,7 @@ public final class HudCache {
             GlStateManager.clearDepth(1.0);
             GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             capturing = true;
+            vignette = pumpkin = portal = false;
             crosshair = null;
             syncState();
             try {
@@ -117,15 +119,14 @@ public final class HudCache {
 
         minecraft.gameRenderer.setupGuiState();
         GlStateManager.enableBlend();
-        if (Minecraft.isFancyGraphicsEnabled()) {
+        if (vignette) {
             ((Gui) gui).polydium$renderVignette(minecraft.player.getBrightness(tickDelta), window);
         }
         GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
-        ItemStack helmet = minecraft.player.inventory.getArmor(3);
-        if (minecraft.options.perspective == 0 && helmet != null && helmet.getItem() == Item.byBlock(Blocks.PUMPKIN)) {
+        if (pumpkin) {
             ((Gui) gui).polydium$renderPumpkinOverlay(window);
         }
-        if (!minecraft.player.hasStatusEffect(StatusEffect.NAUSEA)) {
+        if (portal) {
             float portalTime = minecraft.player.lastPortalTime + (minecraft.player.portalTime - minecraft.player.lastPortalTime) * tickDelta;
             if (portalTime > 0.0F) {
                 ((Gui) gui).polydium$renderNauseaOverlay(portalTime, window);

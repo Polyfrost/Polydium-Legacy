@@ -43,6 +43,7 @@ public abstract class GameGuiMixin implements HudCache.Gui {
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;renderVignette(FLnet/minecraft/client/render/Window;)V"))
     private void polydium$skipCachedVignette(GameGui gui, float brightness, Window window, Operation<Void> original) {
         if (HudCache.capturing) {
+            HudCache.vignette = true;
             GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
             return;
         }
@@ -51,11 +52,13 @@ public abstract class GameGuiMixin implements HudCache.Gui {
 
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;renderPumpkinOverlay(Lnet/minecraft/client/render/Window;)V"))
     private void polydium$skipCachedPumpkin(GameGui gui, Window window, Operation<Void> original) {
-        if (!HudCache.capturing) original.call(gui, window);
+        if (HudCache.capturing) HudCache.pumpkin = true;
+        else original.call(gui, window);
     }
 
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GameGui;renderNauseaOverlay(FLnet/minecraft/client/render/Window;)V"))
     private void polydium$skipCachedPortal(GameGui gui, float portalTime, Window window, Operation<Void> original) {
-        if (!HudCache.capturing) original.call(gui, portalTime, window);
+        if (HudCache.capturing) HudCache.portal = true;
+        else original.call(gui, portalTime, window);
     }
 }
