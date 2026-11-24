@@ -1,11 +1,13 @@
 package org.polyfrost.polydium.mixin;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.objectweb.asm.tree.ClassNode;
 import org.polyfrost.polydium.PolydiumConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.service.MixinService;
 
 public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String PACKAGE = "org.polyfrost.polydium.mixin.";
@@ -26,8 +28,19 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             case "hologram" -> config.hologramFastPath;
             case "shadow" -> config.entityShadowCache;
             case "glmirror" -> config.glStateMirror;
+            case "directrendering" -> argentumHasPrimitiveDirectRendering();
             default -> true;
         };
+    }
+
+    private static boolean argentumHasPrimitiveDirectRendering() {
+        try {
+            ClassNode node = MixinService.getService().getBytecodeProvider()
+                    .getClassNode("dev.rdh.argentum.impl.config.ArgentumConfig");
+            return node.fields.stream().anyMatch(f -> f.name.equals("directRendering") && f.desc.equals("Z"));
+        } catch (ClassNotFoundException | IOException e) {
+            return false;
+        }
     }
 
     @Override

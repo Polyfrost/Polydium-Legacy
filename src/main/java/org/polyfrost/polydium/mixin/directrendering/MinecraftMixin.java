@@ -15,12 +15,21 @@ public abstract class MinecraftMixin {
     @Inject(method = "init", at = @At("TAIL"))
     private void polydium$defaultDirectRendering(CallbackInfo ci) {
         PolydiumConfig config = PolydiumConfig.INSTANCE;
-        if (config.directRenderingDefaultApplied || Argentum.CONFIG == null) return;
-        if (DirectRenderingDefault.shouldEnable(GL11.glGetString(GL11.GL_RENDERER))) {
-            Argentum.CONFIG.directRendering = true;
+        if (config.directRenderingUserSet || Argentum.CONFIG == null) return;
+        Boolean last = config.directRenderingAutoValue;
+        if (last != null && Argentum.CONFIG.directRendering != last) {
+            config.directRenderingUserSet = true;
+            config.save();
+            return;
+        }
+        boolean enable = DirectRenderingDefault.shouldEnable(GL11.glGetString(GL11.GL_RENDERER));
+        if (Argentum.CONFIG.directRendering != enable) {
+            Argentum.CONFIG.directRendering = enable;
             Argentum.CONFIG_STORAGE.save();
         }
-        config.directRenderingDefaultApplied = true;
-        config.save();
+        if (last == null || last != enable) {
+            config.directRenderingAutoValue = enable;
+            config.save();
+        }
     }
 }

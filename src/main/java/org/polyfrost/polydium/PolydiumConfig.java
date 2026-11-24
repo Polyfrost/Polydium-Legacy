@@ -30,7 +30,8 @@ public final class PolydiumConfig {
     public boolean hologramFastPath = true;
     public boolean entityShadowCache = true;
     public boolean glStateMirror = true;
-    public boolean directRenderingDefaultApplied = false;
+    public Boolean directRenderingAutoValue = null;
+    public boolean directRenderingUserSet = false;
 
     private static PolydiumConfig load() {
         PolydiumConfig config = null;
