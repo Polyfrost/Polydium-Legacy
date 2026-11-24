@@ -26,6 +26,9 @@ public final class PolydiumConfig {
     public boolean connectSrvLookup = true;
     public boolean preciseFrameLimiter = true;
     public boolean worldBorderCaching = true;
+    public boolean tickCulling = true;
+    public boolean hologramFastPath = true;
+    public boolean entityShadowCache = true;
 
     private static PolydiumConfig load() {
         PolydiumConfig config = null;

@@ -17,6 +17,7 @@ object Versions {
     val feather = "2"
     val fabric = "0.19.5"
     val netty = "4.2.18.Final"
+    val argentum = "1.0.2+3609b11"
 }
 
 loom {
@@ -32,6 +33,7 @@ ploceus {
 
 repositories {
     mavenCentral()
+    maven("https://maven.taumc.org/releases")
 }
 
 dependencies {
@@ -39,6 +41,8 @@ dependencies {
     mappings(ploceus.featherMappings(Versions.feather))
 
     modImplementation("net.fabricmc:fabric-loader:${Versions.fabric}")
+    modCompileOnly("dev.rdh:argentum:${Versions.argentum}") { isTransitive = false }
+    compileOnly("org.embeddedt.celeritas:celeritas-common:2.6.0-dev.2") { isTransitive = false }
 
     listOf("resolver", "resolver-dns", "codec-dns").forEach {
         compileOnly("io.netty:netty-$it:${Versions.netty}") { isTransitive = false }

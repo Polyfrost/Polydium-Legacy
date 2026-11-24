@@ -22,6 +22,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             case "srv" -> config.connectSrvLookup;
             case "limiter" -> config.preciseFrameLimiter;
             case "border" -> config.worldBorderCaching;
+            case "tick" -> config.tickCulling;
+            case "hologram" -> config.hologramFastPath;
+            case "shadow" -> config.entityShadowCache;
             default -> true;
         };
     }

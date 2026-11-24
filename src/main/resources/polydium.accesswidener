@@ -7,3 +7,11 @@ accessible field net/minecraft/client/render/platform/GlStateManager ALPHA_TEST 
 accessible field net/minecraft/client/render/platform/GlStateManager BLEND Lnet/minecraft/client/render/platform/GlStateManager$Blend;
 accessible field net/minecraft/client/render/platform/GlStateManager COLOR Lnet/minecraft/client/render/platform/GlStateManager$Color;
 accessible field net/minecraft/client/render/platform/GlStateManager$GlState enabled Z
+accessible field net/minecraft/entity/living/LivingEntity lerpSteps I
+accessible field net/minecraft/entity/living/LivingEntity lerpX D
+accessible field net/minecraft/entity/living/LivingEntity lerpY D
+accessible field net/minecraft/entity/living/LivingEntity lerpZ D
+accessible field net/minecraft/entity/living/LivingEntity lerpYaw D
+accessible field net/minecraft/entity/living/LivingEntity lerpPitch D
+accessible field net/minecraft/entity/living/LivingEntity totalWalkDistance F
+accessible field net/minecraft/entity/living/LivingEntity lastTotalWalkDistance F

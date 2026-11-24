@@ -14,11 +14,16 @@
     "hud.GameGuiCrosshairMixin",
     "hud.GameRendererMixin",
     "hud.GlStateManagerMixin",
+    "hologram.LivingEntityRendererMixin",
     "hud.RenderTargetMixin",
     "limiter.MinecraftMixin",
     "particle.ParticleMixin",
+    "shadow.EntityShadowBatchMixin",
     "srv.ConnectScreenMixin",
-    "srv.ServerAddressMixin"
+    "srv.ServerAddressMixin",
+    "tick.EntityMixin",
+    "tick.ArgentumWorldRendererMixin",
+    "tick.WorldMixin"
   ],
   "injectors": {
     "defaultRequire": 1
