@@ -43,6 +43,7 @@ dependencies {
     modImplementation("net.fabricmc:fabric-loader:${Versions.fabric}")
     modCompileOnly("dev.rdh:argentum:${Versions.argentum}") { isTransitive = false }
     compileOnly("org.embeddedt.celeritas:celeritas-common:2.6.0-dev.2") { isTransitive = false }
+    compileOnly("org.joml:joml:1.10.8")
 
     listOf("resolver", "resolver-dns", "codec-dns").forEach {
         compileOnly("io.netty:netty-$it:${Versions.netty}") { isTransitive = false }

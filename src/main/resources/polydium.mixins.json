@@ -5,6 +5,11 @@
   "compatibilityLevel": "JAVA_8",
   "plugin": "org.polyfrost.polydium.mixin.PolydiumMixinPlugin",
   "client": [
+    "directrendering.MinecraftMixin",
+    "glmirror.CameraMixin",
+    "glmirror.EndPortalRendererMixin",
+    "glmirror.GameRendererMixin",
+    "glmirror.GlStateManagerMixin",
     "world.ClientChunkCacheMixin",
     "border.WorldRendererMixin",
     "entity.EntityMixin",

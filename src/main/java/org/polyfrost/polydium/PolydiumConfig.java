@@ -29,6 +29,8 @@ public final class PolydiumConfig {
     public boolean tickCulling = true;
     public boolean hologramFastPath = true;
     public boolean entityShadowCache = true;
+    public boolean glStateMirror = true;
+    public boolean directRenderingDefaultApplied = false;
 
     private static PolydiumConfig load() {
         PolydiumConfig config = null;
@@ -50,7 +52,7 @@ public final class PolydiumConfig {
         return config;
     }
 
-    private void save() {
+    public void save() {
         try {
             Files.createDirectories(PATH.getParent());
             try (Writer writer = Files.newBufferedWriter(PATH)) {

@@ -25,6 +25,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             case "tick" -> config.tickCulling;
             case "hologram" -> config.hologramFastPath;
             case "shadow" -> config.entityShadowCache;
+            case "glmirror" -> config.glStateMirror;
             default -> true;
         };
     }
