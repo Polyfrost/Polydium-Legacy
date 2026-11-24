@@ -27,10 +27,19 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             case "tick" -> config.tickCulling;
             case "hologram" -> config.hologramFastPath;
             case "shadow" -> config.entityShadowCache;
-            case "glmirror" -> config.glStateMirror;
+            case "glmirror" -> config.glStateMirror && !classExists("dev.rdh.argentum.impl.render.GlStateMirror");
             case "directrendering" -> argentumHasPrimitiveDirectRendering();
             default -> true;
         };
+    }
+
+    private static boolean classExists(String name) {
+        try {
+            MixinService.getService().getBytecodeProvider().getClassNode(name);
+            return true;
+        } catch (ClassNotFoundException | IOException e) {
+            return false;
+        }
     }
 
     private static boolean argentumHasPrimitiveDirectRendering() {
