@@ -2,6 +2,7 @@ plugins {
     java
     id("net.fabricmc.fabric-loom-remap") version("1.17.+")
     id("ploceus") version("1.17.+")
+    id("me.modmuss50.mod-publish-plugin") version "2.2.0"
 }
 
 group = "org.polyfrost"
@@ -60,5 +61,26 @@ tasks.processResources {
 
     filesMatching("fabric.mod.json") {
         expand("version" to v)
+    }
+}
+
+publishMods {
+    val modrinthToken = providers.gradleProperty("publish.modrinth.token")
+        .orElse(providers.gradleProperty("modrinth.token"))
+
+    file = tasks.remapJar.flatMap { it.archiveFile }
+    displayName = project.version.toString()
+    version = "v${project.version}"
+    changelog = rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText() ?: "No changelog provided."
+    type = if ("beta" in project.version.toString()) BETA else STABLE
+    modLoaders.add("ornithe")
+    dryRun = !modrinthToken.isPresent
+
+    modrinth {
+        projectId = "hbSfT032"
+        accessToken = modrinthToken
+        minecraftVersions.add(Versions.minecraft)
+        environment = CLIENT_ONLY
+        requires("argentum")
     }
 }
