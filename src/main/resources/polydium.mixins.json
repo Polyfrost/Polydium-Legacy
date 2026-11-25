@@ -20,7 +20,7 @@
     "hud.GameRendererMixin",
     "hud.GlStateManagerMixin",
     "hologram.LivingEntityRendererMixin",
-    "hud.RenderTargetMixin",
+    "hud.GLXMixin",
     "limiter.MinecraftMixin",
     "particle.ParticleMixin",
     "shadow.EntityShadowBatchMixin",
