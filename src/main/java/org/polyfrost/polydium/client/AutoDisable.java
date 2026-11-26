@@ -7,6 +7,7 @@ final class AutoDisable {
     static final int PASS = 0;
     static final int BLIT = 1;
     static final int HUD = 2;
+    static final int DRAW = 3;
 
     private static final Logger LOGGER = LogManager.getLogger("Polydium");
     private static final long WINDOW_NANOS = 1_000_000_000L;
@@ -26,11 +27,11 @@ final class AutoDisable {
     private static int head;
     private static int tail;
 
-    private static final long[] spanStart = new long[3];
-    private static final int[] spanSlot = new int[3];
-    private static final boolean[] spanActive = new boolean[3];
+    private static final long[] spanStart = new long[4];
+    private static final int[] spanSlot = new int[4];
+    private static final boolean[] spanActive = new boolean[4];
 
-    private static final long[] cost = new long[3];
+    private static final long[] cost = new long[4];
     private static int epoch;
     private static long windowStart = -1;
     private static long windowEnd = -1;
@@ -44,10 +45,8 @@ final class AutoDisable {
     private static boolean warmingUp;
 
     private static boolean suppressed;
-    private static boolean calibrating;
-    private static double cycleCost;
+    private static double overhead;
     private static double blitCost;
-    private static double hudOffset;
 
     private AutoDisable() {
     }
@@ -121,6 +120,7 @@ final class AutoDisable {
                 reset();
             }
             windowStart = -1;
+            votes = 0;
             return;
         }
         if (!measurable) {
@@ -142,7 +142,7 @@ final class AutoDisable {
             if (gap > MAX_FRAME_GAP_NANOS) {
                 windowDirty = true;
             }
-            if (now - windowStart < WINDOW_NANOS) {
+            if (now - windowStart < Math.max(WINDOW_NANOS, MIN_CYCLES * 1_000_000_000L / hudFps)) {
                 return;
             }
             windowEnd = now;
@@ -237,7 +237,7 @@ final class AutoDisable {
         cycles = 0;
         windowDirty = false;
         invalidGpu = false;
-        cost[PASS] = cost[BLIT] = cost[HUD] = 0;
+        cost[PASS] = cost[BLIT] = cost[HUD] = cost[DRAW] = 0;
     }
 
     private static void evaluate(long elapsedNanos, int hudFps) {
@@ -251,29 +251,24 @@ final class AutoDisable {
                 votes = 0;
                 return;
             }
-            cycleCost = cost[PASS] / (double) cycles;
+            double draw = cost[DRAW] / (double) cycles;
+            double cycleCost = cost[PASS] / (double) cycles;
             double cycleRatio = cycles / (double) frames;
+            overhead = Math.max(0, cycleCost - draw);
             blitCost = cost[BLIT] / (double) frames;
-            double saving = cycleCost * (1 - cycleRatio) - blitCost;
-            if (vote(saving < -MARGIN_NANOS)) {
+            double cached = cycleCost * cycleRatio + blitCost;
+            if (vote(draw - cached < -MARGIN_NANOS)) {
                 LOGGER.info("Disabling HUD caching: HUD costs {} us per frame without it, {} us with it",
-                        micros(cycleCost), micros(cycleCost * cycleRatio + blitCost));
-                calibrating = true;
+                        micros(draw), micros(cached));
                 switchMode(true);
             }
-        } else {
+        } else if (GpuTimer.supported()) {
             double hud = cost[HUD] / (double) frames;
-            if (calibrating) {
-                calibrating = false;
-                hudOffset = cycleCost - hud;
-                return;
-            }
-            double expected = Math.max(0, hud + hudOffset);
             double cycleRatio = Math.min(1.0, hudFps * (elapsedNanos / 1e9) / frames);
-            double saving = expected * (1 - cycleRatio) - blitCost;
-            if (vote(saving > MARGIN_NANOS)) {
+            double cached = (hud + overhead) * cycleRatio + blitCost;
+            if (vote(hud - cached > MARGIN_NANOS)) {
                 LOGGER.info("Enabling HUD caching: HUD costs {} us per frame without it, about {} us with it",
-                        micros(expected), micros(expected * cycleRatio + blitCost));
+                        micros(hud), micros(cached));
                 switchMode(false);
             }
         }

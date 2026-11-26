@@ -132,7 +132,9 @@ public final class HudCache {
             syncState();
             boolean captured = false;
             try {
+                AutoDisable.begin(AutoDisable.DRAW);
                 draw.run();
+                AutoDisable.end(AutoDisable.DRAW);
                 captured = true;
             } finally {
                 capturing = false;
