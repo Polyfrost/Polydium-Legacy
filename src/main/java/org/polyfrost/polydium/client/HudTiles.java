@@ -56,21 +56,27 @@ final class HudTiles {
 
     static boolean update(RenderTarget hud) {
         if (failed || !init()) return false;
-        if (hud.width != width || hud.height != height) {
-            resize(hud.width, hud.height);
-        }
-
         GlStateManager.activeTexture(GL13.GL_TEXTURE0);
         boolean blend = GlStateManager.BLEND.state.enabled;
         boolean alphaTest = GlStateManager.ALPHA_TEST.state.enabled;
-        GlStateManager.disableBlend();
-        GlStateManager.disableAlphaTest();
-        reduce(hud, partial, firstProgram, firstTexel);
-        reduce(partial, mask, secondProgram, secondTexel);
-        GL20.glUseProgram(0);
-        if (blend) GlStateManager.enableBlend();
-        if (alphaTest) GlStateManager.enableAlphaTest();
-        return true;
+        try {
+            if (hud.width != width || hud.height != height) {
+                resize(hud.width, hud.height);
+            }
+            GlStateManager.disableBlend();
+            GlStateManager.disableAlphaTest();
+            reduce(hud, partial, firstProgram, firstTexel);
+            reduce(partial, mask, secondProgram, secondTexel);
+            return true;
+        } catch (RuntimeException e) {
+            LogManager.getLogger("Polydium").error("Could not update tiled HUD mask, compositing the full screen", e);
+            failed = true;
+            return false;
+        } finally {
+            GL20.glUseProgram(0);
+            if (blend) GlStateManager.enableBlend();
+            if (alphaTest) GlStateManager.enableAlphaTest();
+        }
     }
 
     private static void reduce(RenderTarget source, RenderTarget destination, int program, int texel) {
@@ -129,7 +135,7 @@ final class HudTiles {
             grid = GL15.glGenBuffers();
             return true;
         } catch (RuntimeException e) {
-            GL20.glUseProgram(0);
+            if (GLContext.getCapabilities().OpenGL20) GL20.glUseProgram(0);
             LogManager.getLogger("Polydium").error("Could not set up tiled HUD compositing, compositing the full screen", e);
             failed = true;
             return false;
