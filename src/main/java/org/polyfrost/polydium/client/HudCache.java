@@ -108,12 +108,14 @@ public final class HudCache {
             vignette = pumpkin = portal = false;
             crosshair = null;
             syncState();
+            boolean captured = false;
             try {
                 draw.run();
+                captured = true;
             } finally {
                 capturing = false;
                 syncState();
-                tiled = HudTiles.update(target);
+                tiled = captured && HudTiles.update(target);
                 minecraft.getRenderTarget().bindWrite(true);
                 GlStateManager.colorMask(true, true, true, !minecraft.options.anaglyph);
             }

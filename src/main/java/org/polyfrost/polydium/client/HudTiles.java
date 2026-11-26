@@ -145,18 +145,25 @@ final class HudTiles {
                 + "    float alpha = 0.0;\n"
                 + "    for (int y = 0; y < " + step + "; y += 2) {\n"
                 + "        for (int x = 0; x < " + step + "; x += 2) {\n"
-                + "            alpha = max(alpha, texture2D(source, (base + vec2(x, y)) * texel).a);\n"
+                + "            vec4 color = texture2D(source, (base + vec2(x, y)) * texel);\n"
+                + "            alpha = max(alpha, max(max(color.r, color.g), max(color.b, color.a)));\n"
                 + "        }\n"
                 + "    }\n"
-                + "    gl_FragColor = vec4(alpha);\n"
+                + "    gl_FragColor = vec4(alpha > 0.0 ? 1.0 : 0.0);\n"
                 + "}\n";
     }
 
     private static int link(String vertexSource, String fragmentSource) {
         int program = GL20.glCreateProgram();
-        GL20.glAttachShader(program, compile(GL20.GL_VERTEX_SHADER, vertexSource));
-        GL20.glAttachShader(program, compile(GL20.GL_FRAGMENT_SHADER, fragmentSource));
+        int vertex = compile(GL20.GL_VERTEX_SHADER, vertexSource);
+        int fragment = compile(GL20.GL_FRAGMENT_SHADER, fragmentSource);
+        GL20.glAttachShader(program, vertex);
+        GL20.glAttachShader(program, fragment);
         GL20.glLinkProgram(program);
+        GL20.glDetachShader(program, vertex);
+        GL20.glDetachShader(program, fragment);
+        GL20.glDeleteShader(vertex);
+        GL20.glDeleteShader(fragment);
         if (GL20.glGetProgrami(program, GL20.GL_LINK_STATUS) == GL11.GL_FALSE) {
             throw new IllegalStateException(GL20.glGetProgramInfoLog(program, 4096));
         }
