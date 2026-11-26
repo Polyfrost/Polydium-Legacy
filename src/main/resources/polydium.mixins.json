@@ -17,6 +17,7 @@
     "hud.ChatGuiMixin",
     "hud.GameGuiMixin",
     "hud.GameGuiCrosshairMixin",
+    "hud.GameGuiDebugMixin",
     "hud.GameRendererMixin",
     "hud.GlStateManagerMixin",
     "hologram.LivingEntityRendererMixin",

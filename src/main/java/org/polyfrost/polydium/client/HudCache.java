@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GameGui;
 import net.minecraft.client.gui.GuiElement;
+import net.minecraft.client.gui.overlay.DebugOverlay;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.Window;
 import net.minecraft.client.render.pipeline.RenderTarget;
@@ -25,16 +26,21 @@ public final class HudCache {
     public static boolean portal;
 
     private static RenderTarget target;
+    private static RenderTarget above;
+    private static boolean layered;
     private static boolean failed;
     private static boolean dirty = true;
     private static long lastCapture;
     private static int lastScale;
     private static int lastSlot = -1;
+    private static boolean lastDebug;
     private static Screen lastScreen;
     private static long lastFrame;
     private static long avgFrameTime;
     private static GameGui crosshairGui;
     private static DeferredCall<Boolean> crosshair;
+    private static DebugOverlay debugOverlay;
+    private static DeferredCall<Void> debug;
 
     private HudCache() {
     }
@@ -89,6 +95,10 @@ public final class HudCache {
             lastSlot = minecraft.player.inventory.selectedSlot;
             dirty = true;
         }
+        if (minecraft.options.debugEnabled != lastDebug) {
+            lastDebug = minecraft.options.debugEnabled;
+            dirty = true;
+        }
         if (minecraft.screen != lastScreen) {
             lastScreen = minecraft.screen;
             dirty = true;
@@ -106,6 +116,9 @@ public final class HudCache {
             capturing = true;
             vignette = pumpkin = portal = false;
             crosshair = null;
+            debugOverlay = null;
+            debug = null;
+            layered = false;
             syncState();
             try {
                 draw.run();
@@ -135,7 +148,13 @@ public final class HudCache {
         if (crosshair != null) {
             renderCrosshair(minecraft, window);
         }
-        composite(window);
+        composite(window, target);
+        if (debugOverlay != null && minecraft.options.debugEnabled) {
+            renderDebugOverlay(window);
+        }
+        if (layered) {
+            composite(window, above);
+        }
         return true;
     }
 
@@ -157,6 +176,50 @@ public final class HudCache {
         }
         crosshairGui = gui;
         return true;
+    }
+
+    public static void debugOverlayReached(DebugOverlay overlay) {
+        debugOverlay = overlay;
+        Minecraft minecraft = Minecraft.getInstance();
+        try {
+            if (above == null) {
+                above = new RenderTarget(minecraft.width, minecraft.height, true);
+                above.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+            } else if (above.width != minecraft.width || above.height != minecraft.height) {
+                above.resize(minecraft.width, minecraft.height);
+            }
+        } catch (RuntimeException e) {
+            LogManager.getLogger("Polydium").error("Could not create HUD framebuffer, HUD caching disabled", e);
+            failed = true;
+            target.bindWrite(true);
+            return;
+        }
+        layered = true;
+        above.bindWrite(true);
+        GlStateManager.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
+        GlStateManager.clearDepth(1.0);
+        GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+    }
+
+    public static boolean deferDebugOverlay(Operation<Void> render) {
+        try {
+            debug = new DeferredCall<>(render);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            LogManager.getLogger("Polydium").error("Could not defer debug overlay, HUD caching disabled", e);
+            failed = true;
+            return false;
+        }
+        return true;
+    }
+
+    private static void renderDebugOverlay(Window window) {
+        if (debug == null) {
+            ComposeDebugOverlay.defer(debugOverlay);
+            return;
+        }
+        GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+        GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+        debug.call(debugOverlay, window);
     }
 
     private static void renderCrosshair(Minecraft minecraft, Window window) {
@@ -207,10 +270,10 @@ public final class HudCache {
     }
 
     public static int captureFramebuffer() {
-        return target.frameBufferId;
+        return layered ? above.frameBufferId : target.frameBufferId;
     }
 
-    private static void composite(Window window) {
+    private static void composite(Window window, RenderTarget layer) {
         GlStateManager.disableAlphaTest();
         GlStateManager.disableDepthTest();
         GlStateManager.depthMask(false);
@@ -218,7 +281,7 @@ public final class HudCache {
         GlStateManager.enableBlend();
         GlStateManager.blendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        target.bindRead();
+        layer.bindRead();
 
         double width = window.getScaledWidth();
         double height = window.getScaledHeight();
@@ -231,7 +294,7 @@ public final class HudCache {
         buffer.vertex(0.0, 0.0, 0.0).texture(0.0, 1.0).nextVertex();
         tesselator.end();
 
-        target.unbindRead();
+        layer.unbindRead();
         GlStateManager.depthMask(true);
         GlStateManager.enableDepthTest();
         GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
