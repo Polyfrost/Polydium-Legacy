@@ -26,6 +26,7 @@ public final class HudCache {
 
     private static RenderTarget target;
     private static boolean failed;
+    private static Boolean lowBandwidth;
     private static boolean dirty = true;
     private static long lastCapture;
     private static int lastScale;
@@ -50,7 +51,8 @@ public final class HudCache {
     public static boolean render(GameGui gui, float tickDelta, Runnable draw) {
         Minecraft minecraft = Minecraft.getInstance();
         int fps = PolydiumConfig.INSTANCE.hudFps;
-        if (failed || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
+        if (lowBandwidth == null) lowBandwidth = DirectRenderingDefault.isLowBandwidth(GL11.glGetString(GL11.GL_RENDERER));
+        if (failed || lowBandwidth || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
             dirty = true;
             return false;
         }
