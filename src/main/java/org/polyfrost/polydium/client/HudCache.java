@@ -27,12 +27,16 @@ public final class HudCache {
     private static RenderTarget target;
     private static boolean failed;
     private static boolean dirty = true;
+    private static boolean tiled;
     private static long lastCapture;
     private static int lastScale;
     private static int lastSlot = -1;
     private static Screen lastScreen;
     private static long lastFrame;
     private static long avgFrameTime;
+    private static int lastWidth;
+    private static int lastHeight;
+    private static int lastFps;
     private static GameGui crosshairGui;
     private static DeferredCall<Boolean> crosshair;
 
@@ -49,7 +53,8 @@ public final class HudCache {
 
     public static boolean render(GameGui gui, float tickDelta, Runnable draw) {
         Minecraft minecraft = Minecraft.getInstance();
-        int fps = PolydiumConfig.INSTANCE.hudFps;
+        PolydiumConfig config = PolydiumConfig.INSTANCE;
+        int fps = config.hudFps;
         if (failed || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
             dirty = true;
             return false;
@@ -60,9 +65,26 @@ public final class HudCache {
         long frameTime = Math.min(now - lastFrame, 2 * interval);
         lastFrame = now;
         avgFrameTime += (frameTime - avgFrameTime) / 8;
-        if (avgFrameTime >= interval) {
+        if (minecraft.width != lastWidth || minecraft.height != lastHeight || fps != lastFps) {
+            lastWidth = minecraft.width;
+            lastHeight = minecraft.height;
+            lastFps = fps;
+            AutoDisable.reset();
+        }
+        boolean cacheable = avgFrameTime < interval;
+        AutoDisable.tick(config.hudAutoDisable, cacheable && minecraft.screen == null, fps);
+        if (!cacheable) {
             dirty = true;
             return false;
+        }
+        if (AutoDisable.suppressed()) {
+            dirty = true;
+            boolean measured = AutoDisable.begin(AutoDisable.HUD);
+            draw.run();
+            if (measured) {
+                AutoDisable.end(AutoDisable.HUD);
+            }
+            return true;
         }
 
         Window window = new Window(minecraft);
@@ -98,6 +120,7 @@ public final class HudCache {
         if (dirty || elapsed >= interval) {
             lastCapture = dirty || elapsed >= 2 * interval ? now : lastCapture + interval;
             dirty = false;
+            AutoDisable.begin(AutoDisable.PASS);
             GlStateManager.colorMask(true, true, true, true);
             target.bindWrite(true);
             GlStateManager.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
@@ -107,11 +130,20 @@ public final class HudCache {
             vignette = pumpkin = portal = false;
             crosshair = null;
             syncState();
+            boolean captured = false;
             try {
+                AutoDisable.begin(AutoDisable.DRAW);
                 draw.run();
+                AutoDisable.end(AutoDisable.DRAW);
+                captured = true;
             } finally {
                 capturing = false;
                 syncState();
+                tiled = captured && HudTiles.update(target);
+                AutoDisable.end(AutoDisable.PASS);
+                if (captured) {
+                    AutoDisable.onCycle();
+                }
                 minecraft.getRenderTarget().bindWrite(true);
                 GlStateManager.colorMask(true, true, true, !minecraft.options.anaglyph);
             }
@@ -135,7 +167,9 @@ public final class HudCache {
         if (crosshair != null) {
             renderCrosshair(minecraft, window);
         }
+        AutoDisable.begin(AutoDisable.BLIT);
         composite(window);
+        AutoDisable.end(AutoDisable.BLIT);
         return true;
     }
 
@@ -218,8 +252,20 @@ public final class HudCache {
         GlStateManager.enableBlend();
         GlStateManager.blendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        target.bindRead();
+        if (tiled) {
+            HudTiles.draw(target);
+        } else {
+            drawFullScreen(window);
+        }
+        GlStateManager.depthMask(true);
+        GlStateManager.enableDepthTest();
+        GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+        GlStateManager.disableLighting();
+        GlStateManager.enableAlphaTest();
+    }
 
+    private static void drawFullScreen(Window window) {
+        target.bindRead();
         double width = window.getScaledWidth();
         double height = window.getScaledHeight();
         Tesselator tesselator = Tesselator.getInstance();
@@ -230,12 +276,6 @@ public final class HudCache {
         buffer.vertex(width, 0.0, 0.0).texture(1.0, 1.0).nextVertex();
         buffer.vertex(0.0, 0.0, 0.0).texture(0.0, 1.0).nextVertex();
         tesselator.end();
-
         target.unbindRead();
-        GlStateManager.depthMask(true);
-        GlStateManager.enableDepthTest();
-        GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
-        GlStateManager.disableLighting();
-        GlStateManager.enableAlphaTest();
     }
 }
