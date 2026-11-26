@@ -23,6 +23,7 @@ public final class PolydiumConfig {
     public boolean entityBlockCaching = true;
     public boolean hudCaching = true;
     public int hudFps = 60;
+    public boolean hudAutoDisable = true;
     public boolean connectSrvLookup = true;
     public boolean preciseFrameLimiter = true;
     public boolean worldBorderCaching = true;

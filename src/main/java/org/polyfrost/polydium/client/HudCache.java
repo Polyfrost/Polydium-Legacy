@@ -34,6 +34,9 @@ public final class HudCache {
     private static Screen lastScreen;
     private static long lastFrame;
     private static long avgFrameTime;
+    private static int lastWidth;
+    private static int lastHeight;
+    private static int lastFps;
     private static GameGui crosshairGui;
     private static DeferredCall<Boolean> crosshair;
 
@@ -50,7 +53,8 @@ public final class HudCache {
 
     public static boolean render(GameGui gui, float tickDelta, Runnable draw) {
         Minecraft minecraft = Minecraft.getInstance();
-        int fps = PolydiumConfig.INSTANCE.hudFps;
+        PolydiumConfig config = PolydiumConfig.INSTANCE;
+        int fps = config.hudFps;
         if (failed || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
             dirty = true;
             return false;
@@ -61,9 +65,26 @@ public final class HudCache {
         long frameTime = Math.min(now - lastFrame, 2 * interval);
         lastFrame = now;
         avgFrameTime += (frameTime - avgFrameTime) / 8;
-        if (avgFrameTime >= interval) {
+        if (minecraft.width != lastWidth || minecraft.height != lastHeight || fps != lastFps) {
+            lastWidth = minecraft.width;
+            lastHeight = minecraft.height;
+            lastFps = fps;
+            AutoDisable.reset();
+        }
+        boolean cacheable = avgFrameTime < interval;
+        AutoDisable.tick(config.hudAutoDisable, cacheable && minecraft.screen == null, fps);
+        if (!cacheable) {
             dirty = true;
             return false;
+        }
+        if (AutoDisable.suppressed()) {
+            dirty = true;
+            boolean measured = AutoDisable.begin(AutoDisable.HUD);
+            draw.run();
+            if (measured) {
+                AutoDisable.end(AutoDisable.HUD);
+            }
+            return true;
         }
 
         Window window = new Window(minecraft);
@@ -99,6 +120,7 @@ public final class HudCache {
         if (dirty || elapsed >= interval) {
             lastCapture = dirty || elapsed >= 2 * interval ? now : lastCapture + interval;
             dirty = false;
+            AutoDisable.begin(AutoDisable.PASS);
             GlStateManager.colorMask(true, true, true, true);
             target.bindWrite(true);
             GlStateManager.clearColor(0.0F, 0.0F, 0.0F, 0.0F);
@@ -116,6 +138,10 @@ public final class HudCache {
                 capturing = false;
                 syncState();
                 tiled = captured && HudTiles.update(target);
+                AutoDisable.end(AutoDisable.PASS);
+                if (captured) {
+                    AutoDisable.onCycle();
+                }
                 minecraft.getRenderTarget().bindWrite(true);
                 GlStateManager.colorMask(true, true, true, !minecraft.options.anaglyph);
             }
@@ -139,7 +165,9 @@ public final class HudCache {
         if (crosshair != null) {
             renderCrosshair(minecraft, window);
         }
+        AutoDisable.begin(AutoDisable.BLIT);
         composite(window);
+        AutoDisable.end(AutoDisable.BLIT);
         return true;
     }
 
