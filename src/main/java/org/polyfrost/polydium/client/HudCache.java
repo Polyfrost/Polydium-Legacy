@@ -26,8 +26,8 @@ public final class HudCache {
 
     private static RenderTarget target;
     private static boolean failed;
-    private static Boolean lowBandwidth;
     private static boolean dirty = true;
+    private static boolean tiled;
     private static long lastCapture;
     private static int lastScale;
     private static int lastSlot = -1;
@@ -51,8 +51,7 @@ public final class HudCache {
     public static boolean render(GameGui gui, float tickDelta, Runnable draw) {
         Minecraft minecraft = Minecraft.getInstance();
         int fps = PolydiumConfig.INSTANCE.hudFps;
-        if (lowBandwidth == null) lowBandwidth = DirectRenderingDefault.isLowBandwidth(GL11.glGetString(GL11.GL_RENDERER));
-        if (failed || lowBandwidth || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
+        if (failed || fps <= 0 || !GLX.useFbo() || needsLiveHud(minecraft.screen)) {
             dirty = true;
             return false;
         }
@@ -114,6 +113,7 @@ public final class HudCache {
             } finally {
                 capturing = false;
                 syncState();
+                tiled = HudTiles.update(target);
                 minecraft.getRenderTarget().bindWrite(true);
                 GlStateManager.colorMask(true, true, true, !minecraft.options.anaglyph);
             }
@@ -220,8 +220,20 @@ public final class HudCache {
         GlStateManager.enableBlend();
         GlStateManager.blendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.color4f(1.0F, 1.0F, 1.0F, 1.0F);
-        target.bindRead();
+        if (tiled) {
+            HudTiles.draw(target);
+        } else {
+            drawFullScreen(window);
+        }
+        GlStateManager.depthMask(true);
+        GlStateManager.enableDepthTest();
+        GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+        GlStateManager.disableLighting();
+        GlStateManager.enableAlphaTest();
+    }
 
+    private static void drawFullScreen(Window window) {
+        target.bindRead();
         double width = window.getScaledWidth();
         double height = window.getScaledHeight();
         Tesselator tesselator = Tesselator.getInstance();
@@ -232,12 +244,6 @@ public final class HudCache {
         buffer.vertex(width, 0.0, 0.0).texture(1.0, 1.0).nextVertex();
         buffer.vertex(0.0, 0.0, 0.0).texture(0.0, 1.0).nextVertex();
         tesselator.end();
-
         target.unbindRead();
-        GlStateManager.depthMask(true);
-        GlStateManager.enableDepthTest();
-        GlStateManager.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
-        GlStateManager.disableLighting();
-        GlStateManager.enableAlphaTest();
     }
 }
